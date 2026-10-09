@@ -1,0 +1,19 @@
+{
+  "name": "iF รวมร้านค้า",
+  "short_name": "iF",
+  "description": "iF ไรเดอร์ส่งของกิน — รวมร้านค้า เลือกร้าน เลือกสินค้า สั่งได้ในที่เดียว",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "th",
+  "background_color": "#ffffff",
+  "theme_color": "#c2410c",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -220,3 +220,14 @@ function initCommonUI() {
 }
 
 document.addEventListener('DOMContentLoaded', initCommonUI);
+
+// ติดตั้งเป็นแอปบนมือถือ (PWA): sw.js อยู่ข้าง manifest.json ที่รากเว็บ
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  const manifest = document.querySelector('link[rel="manifest"]');
+  if (manifest) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register(new URL('sw.js', manifest.href).href)
+        .catch(err => console.warn('ลงทะเบียน Service Worker ไม่สำเร็จ', err));
+    });
+  }
+}
