@@ -36,7 +36,7 @@
 
 /* ---------- Grid ---------- */
 .product-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
-@media (min-width: 520px) { .product-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 600px) { .product-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 900px) { .product-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; } }
 @media (min-width: 1100px) { .product-grid.featured { grid-template-columns: repeat(4, 1fr); } }
 
@@ -98,7 +98,7 @@
 
 /* ---------- ร้านค้า (หน้าแรก) ---------- */
 .store-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
-@media (min-width: 520px) { .store-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 600px) { .store-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 900px) { .store-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; } }
 .store-grid > .loading, .store-grid > .empty-state, .store-grid > .notice { grid-column: 1 / -1; }
 
@@ -159,3 +159,29 @@
 .summary-label { margin: 10px 0 2px; font-size: 14px; color: var(--muted); }
 .summary-store-name { margin: 0 0 6px; font: 600 18px var(--font-head); color: var(--green-900); }
 .order-store { margin: 0; font: 600 15px var(--font-head); color: var(--green-800); }
+
+/* ---------- มือถือ: การ์ดแนวนอน (รูปเล็กซ้าย รายละเอียดขวา) ---------- */
+@media (max-width: 599px) {
+  .store-grid, .product-grid { gap: 12px; }
+
+  .store-card { flex-direction: row; }
+  .store-media { flex: none; width: 112px; aspect-ratio: auto; min-height: 112px; }
+  .store-body { padding: 12px; gap: 6px; min-width: 0; }
+  .store-title h3 { font-size: 17px; }
+  .store-desc { font-size: 14px; }
+  .store-body .btn { min-height: 40px; padding: 8px 12px; font-size: 15px; }
+  .store-add { flex-direction: column; min-height: 120px; }
+
+  .product-card { flex-direction: row; }
+  .product-media { width: 120px; aspect-ratio: auto; min-height: 120px; }
+  .product-cat { left: 6px; top: 6px; padding: 2px 8px; font-size: 11px; }
+  .soldout-ribbon { font-size: 16px; }
+  .product-body { padding: 12px; gap: 6px; min-width: 0; }
+  .product-name { font-size: 16px; }
+  .product-desc { font-size: 13px; }
+  .product-price { font-size: 20px; }
+  .stock-tag { padding: 3px 8px; font-size: 12px; }
+  .product-actions { flex-wrap: wrap; }
+  .product-actions .qty-stepper { height: 40px; }
+  .product-actions .btn-add { flex: 1 1 100%; min-height: 42px; font-size: 14px; }
+}
