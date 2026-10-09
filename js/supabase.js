@@ -10,7 +10,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_eStQmcoJ3-oAzDoo0W-X6Q_Tb_EdugS';
 const SHOP = {
   name: 'iF',
   lineId: '141414dw',
-  facebook: 'https://www.facebook.com/share/1C79rC3M53/'
+  facebook: 'https://www.facebook.com/share/19Va1WBDbJ/'
 };
 
 // รูปร้านค้า (stores/...) และรูปสินค้า (products/...) เก็บใน bucket เดียวกัน
