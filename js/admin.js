@@ -58,13 +58,105 @@ function initShell() {
   backdrop?.addEventListener('click', close);
 }
 
+/* ---------- แจ้งเตือนออเดอร์ใหม่: เสียง + สั่น + กระพริบชื่อแท็บ (ทุกหน้า admin) ---------- */
+
+const SOUND_KEY = 'if_admin_sound';
+
+const OrderAlert = {
+  ctx: null,
+  enabled: (() => { try { return localStorage.getItem(SOUND_KEY) !== 'off'; } catch { return true; } })(),
+  unread: 0,
+  baseTitle: document.title,
+  onNew: null,   // หน้าที่เปิดอยู่ตั้งไว้เพื่อโหลดข้อมูลใหม่
+
+  // เบราว์เซอร์ให้เล่นเสียงได้หลังผู้ใช้แตะหน้าเว็บอย่างน้อย 1 ครั้ง
+  unlock() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
+    }
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    this.renderButton();
+  },
+
+  ready() { return !!this.ctx && this.ctx.state === 'running'; },
+
+  // เสียงกริ๊ง 3 โน้ตขึ้น เล่น 2 รอบ (สังเคราะห์เอง ไม่ต้องมีไฟล์เสียง)
+  chime() {
+    if (!this.enabled || !this.ready()) return;
+    const t0 = this.ctx.currentTime + 0.02;
+    [0, 0.75].forEach(offset => {
+      [880, 1175, 1568].forEach((freq, i) => {
+        const at = t0 + offset + i * 0.16;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, at);
+        gain.gain.exponentialRampToValueAtTime(0.35, at + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.45);
+        osc.connect(gain).connect(this.ctx.destination);
+        osc.start(at);
+        osc.stop(at + 0.5);
+      });
+    });
+  },
+
+  notify(order) {
+    showToast(`🛒 ออเดอร์ใหม่ ${order?.order_number || ''} — ${order?.store_name || ''}`, 'success', 6000);
+    this.chime();
+    if (this.enabled) navigator.vibrate?.([200, 100, 200]);
+    if (document.hidden) {
+      this.unread++;
+      document.title = `(${this.unread}) 🛒 ออเดอร์ใหม่! · ${this.baseTitle}`;
+    }
+    this.onNew?.();
+  },
+
+  renderButton() {
+    const btn = document.getElementById('soundBtn');
+    if (!btn) return;
+    const on = this.enabled;
+    btn.textContent = !on ? '🔕 เสียงปิด' : this.ready() ? '🔔 เสียงเปิด' : '🔔 แตะเพื่อเปิดเสียง';
+    btn.classList.toggle('off', !on);
+    btn.classList.toggle('pending', on && !this.ready());
+    btn.setAttribute('aria-pressed', String(on));
+    btn.title = on ? 'มีออเดอร์ใหม่จะมีเสียงแจ้งเตือน — กดเพื่อปิดเสียง' : 'กดเพื่อเปิดเสียงแจ้งเตือนออเดอร์ใหม่';
+  },
+
+  start() {
+    const topbar = document.querySelector('.admin-topbar');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'soundBtn';
+    btn.className = 'sound-btn';
+    topbar?.insertBefore(btn, document.getElementById('adminEmail'));
+    btn.addEventListener('click', () => {
+      if (this.enabled && !this.ready()) { this.unlock(); this.chime(); return; }
+      this.enabled = !this.enabled;
+      try { localStorage.setItem(SOUND_KEY, this.enabled ? 'on' : 'off'); } catch { /* ignore */ }
+      this.unlock();
+      if (this.enabled) this.chime();   // เล่นตัวอย่างให้ได้ยิน
+      this.renderButton();
+    });
+    // แตะตรงไหนก็ได้ครั้งแรก = ปลดล็อกเสียง
+    const first = () => this.unlock();
+    document.addEventListener('pointerdown', first, { once: true });
+    document.addEventListener('keydown', first, { once: true });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) { this.unread = 0; document.title = this.baseTitle; }
+    });
+    this.renderButton();
+
+    sb.channel('admin-orders')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shop_orders' }, payload => this.notify(payload.new))
+      .subscribe();
+  }
+};
+
 function subscribeNewOrders(onNew) {
-  sb.channel('admin-orders')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shop_orders' }, payload => {
-      showToast(`🛒 ออเดอร์ใหม่ ${payload.new?.order_number || ''} — ${payload.new?.store_name || ''}`, 'success', 5000);
-      onNew();
-    })
-    .subscribe();
+  OrderAlert.onNew = onNew;
 }
 
 /* ---------- ตัวเลือกร้านค้า (ใช้ร่วมหลายหน้า) ---------- */
@@ -866,6 +958,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const page = document.body.dataset.page;
   initShell();
   if (!(await Admin.requireAdmin())) return;
+  OrderAlert.start();
 
   try {
     if (page === 'dashboard') await initDashboard();

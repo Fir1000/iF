@@ -14,6 +14,14 @@ body.admin { background: var(--yellow-50); }
 }
 .admin-topbar .brand-mini { display: flex; align-items: center; gap: 8px; font: 600 16px var(--font-head); color: var(--green-900); text-decoration: none; margin-right: auto; }
 .admin-topbar .brand-mini img { width: 32px; height: 32px; }
+.sound-btn {
+  flex: none; min-height: 36px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid var(--green-200); background: var(--green-50); color: var(--green-800);
+  font: 600 13px var(--font-head); white-space: nowrap;
+}
+.sound-btn.pending { background: var(--bamboo); border-color: var(--bamboo); color: var(--green-900); animation: soundPulse 1.6s ease-in-out infinite; }
+.sound-btn.off { background: #f1f1f1; border-color: #ddd; color: #666; }
+@keyframes soundPulse { 50% { box-shadow: 0 0 0 6px rgba(245, 179, 1, .25); } }
 .admin-user { font-size: 13px; color: var(--muted); max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-menu-btn {
   width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 10px;
