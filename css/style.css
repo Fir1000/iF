@@ -461,3 +461,11 @@ body.has-sticky-cart .line-float { bottom: 88px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ---------- ปุ่มสลับภาษา TH | EN ---------- */
+.lang-switch {
+  flex: none; display: inline-flex; padding: 3px; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid var(--green-200); background: #fff; font: 600 13px var(--font-head);
+}
+.lang-switch span { padding: 4px 8px; border-radius: 999px; color: var(--muted); line-height: 1.2; }
+.lang-switch span.on { background: var(--green-700); color: #fff; }

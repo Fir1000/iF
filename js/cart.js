@@ -139,7 +139,8 @@ const Cart = {
 function addToCartWithPrompt(product, qty, store) {
   let res = Cart.add(product, qty, store);
   if (res.conflict) {
-    if (!confirm(`ตะกร้ามีสินค้าจากร้าน "${res.storeName}" อยู่\n\nสั่งได้ครั้งละ 1 ร้าน — ล้างตะกร้าเดิมแล้วเริ่มสั่งจากร้าน "${store.name}" ?`)) {
+    if (!confirm(t('ตะกร้ามีสินค้าจากร้าน "{a}" อยู่\n\nสั่งได้ครั้งละ 1 ร้าน — ล้างตะกร้าเดิมแล้วเริ่มสั่งจากร้าน "{b}" ?',
+      { a: res.storeName, b: store.name }))) {
       return { ok: false, cancelled: true };
     }
     Cart.clear();

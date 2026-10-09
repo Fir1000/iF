@@ -48,7 +48,8 @@ function formatPrice(n) {
 
 function formatDate(iso) {
   if (!iso) return '-';
-  return new Date(iso).toLocaleString('th-TH', {
+  const locale = typeof I18N !== 'undefined' && I18N.lang === 'en' ? 'en-GB' : 'th-TH';
+  return new Date(iso).toLocaleString(locale, {
     timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: '2-digit',
     hour: '2-digit', minute: '2-digit'
   });
@@ -201,7 +202,8 @@ function initCommonUI() {
     a.target = '_blank';
     a.rel = 'noopener';
   });
-  document.querySelectorAll('[data-year]').forEach(el => { el.textContent = new Date().getFullYear() + 543; });
+  const buddhistYear = !(typeof I18N !== 'undefined' && I18N.lang === 'en');
+  document.querySelectorAll('[data-year]').forEach(el => { el.textContent = new Date().getFullYear() + (buddhistYear ? 543 : 0); });
   initAccountLink();
 
   // เมนูมือถือ
