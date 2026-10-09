@@ -4,7 +4,7 @@
    ข้อมูลร้าน/สินค้า/ออเดอร์ (Supabase) ไม่ผ่านแคชนี้
    ===================================================================== */
 
-const CACHE = 'if-shell-v1';
+const CACHE = 'if-shell-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 
