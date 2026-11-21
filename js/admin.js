@@ -103,16 +103,35 @@ const OrderAlert = {
     });
   },
 
+  // แจ้งเตือนเมื่อลูกค้ากด "จ่ายแล้วเรียบร้อย" (ออเดอร์ที่ยังไม่จ่ายแค่โหลดรายการใหม่ ไม่ส่งเสียง)
   notify(order) {
-    showToast(`🛒 ออเดอร์ใหม่ ${order?.order_number || ''} — ${order?.store_name || ''}`, 'success', 6000);
+    showToast(`💰 ลูกค้าแจ้งโอนแล้ว ${order?.order_number || ''} — ${order?.store_name || ''} · รอยืนยันออเดอร์`, 'success', 8000);
     this.chime();
     if (this.enabled) navigator.vibrate?.([200, 100, 200]);
     if (document.hidden) {
       this.unread++;
-      document.title = `(${this.unread}) 🛒 ออเดอร์ใหม่! · ${this.baseTitle}`;
+      document.title = `(${this.unread}) 💰 รอยืนยันออเดอร์! · ${this.baseTitle}`;
     }
     this.onNew?.();
   },
+
+  onInsert(order) {
+    // ออเดอร์เก่า (ก่อนมีระบบ QR) ไม่มี payment_status -> แจ้งเตือนแบบเดิม
+    if (!order?.payment_status) { this.notify(order); return; }
+    this.onNew?.();
+  },
+
+  onUpdate(order) {
+    const fresh = order?.paid_at && Date.now() - new Date(order.paid_at).getTime() < 2 * 60 * 1000;
+    if (order?.payment_status === 'waiting' && order.status === 'pending' && fresh && !this.seen.has(order.id)) {
+      this.seen.add(order.id);
+      this.notify(order);
+    } else {
+      this.onNew?.();
+    }
+  },
+
+  seen: new Set(),
 
   renderButton() {
     const btn = document.getElementById('soundBtn');
@@ -150,7 +169,8 @@ const OrderAlert = {
     this.renderButton();
 
     sb.channel('admin-orders')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shop_orders' }, payload => this.notify(payload.new))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shop_orders' }, payload => this.onInsert(payload.new))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'shop_orders' }, payload => this.onUpdate(payload.new))
       .subscribe();
   }
 };
@@ -668,9 +688,9 @@ async function resizeImage(file, maxSize = 1200, quality = 0.85) {
   }
 }
 
-async function uploadImage(originalFile, folder) {
+async function uploadImage(originalFile, folder, { resize = true } = {}) {
   if (originalFile.size > 10 * 1024 * 1024) throw new Error('ไฟล์รูปใหญ่เกินไป (สูงสุด 10MB ก่อนย่อ)');
-  const file = await resizeImage(originalFile);
+  const file = resize ? await resizeImage(originalFile) : originalFile;
   if (file.size > 5 * 1024 * 1024) throw new Error('ไฟล์รูปใหญ่เกิน 5MB');
   const ext = ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' })[file.type] || 'jpg';
   const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -803,7 +823,14 @@ async function initOrders() {
 
   fillStoreSelect(storeFilter, await fetchStores(), { allowAll: true });
   statusFilter.innerHTML = '<option value="">ทุกสถานะ</option>' +
-    Object.entries(ORDER_STATUS).map(([k, v]) => `<option value="${k}">${escapeHtml(v.label)}</option>`).join('');
+    '<optgroup label="การชำระเงิน">' +
+    Object.entries(PAYMENT_STATUS).map(([k, v]) => `<option value="pay:${k}">💳 ${escapeHtml(v.label)}</option>`).join('') +
+    '</optgroup><optgroup label="สถานะออเดอร์">' +
+    Object.entries(ORDER_STATUS).map(([k, v]) => `<option value="${k}">${escapeHtml(v.label)}</option>`).join('') +
+    '</optgroup>';
+  // ลิงก์ orders.html?filter=pay:waiting เปิดรายการที่รอยืนยันได้ทันที
+  const preset = new URLSearchParams(location.search).get('filter');
+  if (preset && [...statusFilter.options].some(o => o.value === preset)) statusFilter.value = preset;
 
   function statusSelect(o) {
     return `<select class="status-select ${ORDER_STATUS[o.status]?.cls || ''}" data-act="status" aria-label="สถานะคำสั่งซื้อ">
@@ -815,17 +842,19 @@ async function initOrders() {
   async function load(append = false) {
     if (!append) page = 0;
     let query = sb.from('shop_orders')
-      .select('id,order_number,store_id,store_name,customer_name,customer_email,phone,address,note,total_amount,status,created_at', { count: 'exact' })
+      .select('id,order_number,store_id,store_name,customer_name,customer_email,phone,address,note,total_amount,status,payment_status,paid_at,payment_confirmed_at,created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
 
     const q = search.value.replace(/[,()%*\\"']/g, ' ').trim();
     if (q) query = query.or(`order_number.ilike.%${q}%,customer_name.ilike.%${q}%,phone.ilike.%${q.replace(/[^0-9+]/g, '') || q}%`);
     if (storeFilter.value) query = query.eq('store_id', storeFilter.value);
-    if (statusFilter.value) query = query.eq('status', statusFilter.value);
+    const f = statusFilter.value;
+    if (f.startsWith('pay:')) query = query.eq('payment_status', f.slice(4)).neq('status', 'cancelled');
+    else if (f) query = query.eq('status', f);
 
     const { data, error, count } = await query;
-    if (error) { tbody.innerHTML = `<tr><td colspan="8">${escapeHtml(translateError(error))}</td></tr>`; return; }
+    if (error) { tbody.innerHTML = `<tr><td colspan="9">${escapeHtml(translateError(error))}</td></tr>`; return; }
 
     orders = append ? orders.concat(data) : data;
     document.getElementById('orderCount').textContent = `พบ ${Number(count || 0).toLocaleString('th-TH')} รายการ`;
@@ -833,15 +862,23 @@ async function initOrders() {
     render();
   }
 
+  function payCell(o) {
+    if (!o.payment_status) return '<span class="muted">-</span>';
+    const canConfirm = o.status !== 'cancelled' && o.payment_status !== 'paid';
+    return `<div class="pay-cell">${paymentBadge(o.payment_status)}
+      ${canConfirm ? `<button type="button" class="btn btn-sm btn-confirm-pay" data-act="confirm">✅ ยืนยันออเดอร์</button>` : ''}</div>`;
+  }
+
   function render() {
     tbody.innerHTML = orders.length ? orders.map(o => `
-      <tr data-id="${escapeHtml(o.id)}">
+      <tr data-id="${escapeHtml(o.id)}" class="${o.payment_status === 'waiting' && o.status !== 'cancelled' ? 'row-waiting' : ''}">
         <td data-label="เลข Order"><strong class="mono">${escapeHtml(o.order_number)}</strong></td>
         <td data-label="ร้านค้า">${escapeHtml(o.store_name)}</td>
         <td data-label="ชื่อลูกค้า">${escapeHtml(o.customer_name)}</td>
         <td data-label="เบอร์โทร"><a href="tel:${escapeHtml(o.phone)}">${escapeHtml(o.phone)}</a></td>
         <td data-label="ยอดรวม" class="num">${formatPrice(o.total_amount)}</td>
         <td data-label="วันที่สั่ง">${formatDate(o.created_at)}</td>
+        <td data-label="ชำระเงิน">${payCell(o)}</td>
         <td data-label="สถานะ">${statusSelect(o)}</td>
         <td data-label="">
           <div class="row-actions">
@@ -850,7 +887,21 @@ async function initOrders() {
           </div>
         </td>
       </tr>`).join('')
-      : '<tr><td colspan="8" class="muted center">ไม่พบคำสั่งซื้อ</td></tr>';
+      : '<tr><td colspan="9" class="muted center">ไม่พบคำสั่งซื้อ</td></tr>';
+  }
+
+  // ตรวจยอดโอนแล้ว -> ชำระเงินแล้ว + รับออเดอร์แล้ว
+  async function confirmPayment(order, btn) {
+    let msg = `ยืนยันออเดอร์ ${order.order_number} ?\n\nตรวจแล้วว่ามียอดโอน ${formatPrice(order.total_amount)} เข้ามาจริง`;
+    if (order.payment_status === 'unpaid') msg += '\n\n⚠️ ลูกค้ายังไม่ได้กด "จ่ายแล้วเรียบร้อย"';
+    if (!confirm(msg)) return;
+    btn.disabled = true;
+    const { error } = await sb.rpc('shop_admin_confirm_payment', { p_order_id: order.id });
+    if (error) { btn.disabled = false; showToast(translateError(error), 'error', 5000); return; }
+    order.payment_status = 'paid';
+    if (order.status === 'pending') order.status = 'accepted';
+    showToast(`ยืนยันออเดอร์ ${order.order_number} แล้ว`, 'success');
+    render();
   }
 
   async function changeStatus(sel, order) {
@@ -871,8 +922,8 @@ async function initOrders() {
       return;
     }
     order.status = next;
-    sel.className = `status-select ${ORDER_STATUS[next].cls}`;
     showToast(`อัปเดตสถานะเป็น "${label}" แล้ว`, 'success');
+    render();   // ปุ่มยืนยันออเดอร์ขึ้น/หายตามสถานะ
   }
 
   async function viewOrder(order) {
@@ -894,6 +945,9 @@ async function initOrders() {
         <dt>หมายเหตุ</dt><dd class="pre">${escapeHtml(order.note || '-')}</dd>
         <dt>วันที่สั่ง</dt><dd>${formatDate(order.created_at)}</dd>
         <dt>สถานะ</dt><dd>${statusBadge(order.status)}</dd>
+        <dt>ชำระเงิน</dt><dd>${paymentBadge(order.payment_status) || '-'}</dd>
+        ${order.paid_at ? `<dt>ลูกค้าแจ้งโอนเมื่อ</dt><dd>${formatDate(order.paid_at)}</dd>` : ''}
+        ${order.payment_confirmed_at ? `<dt>ยืนยันออเดอร์เมื่อ</dt><dd>${formatDate(order.payment_confirmed_at)}</dd>` : ''}
       </dl>
       ${error ? `<p class="notice notice-error">${escapeHtml(translateError(error))}</p>` : `
       <table class="summary-table">
@@ -937,6 +991,7 @@ async function initOrders() {
     if (!order) return;
     if (btn.dataset.act === 'view') viewOrder(order);
     if (btn.dataset.act === 'delete') deleteOrder(order, btn);
+    if (btn.dataset.act === 'confirm') confirmPayment(order, btn);
   });
   document.getElementById('closeOrderDialog').addEventListener('click', () => dialog.close());
   document.getElementById('loadMore').addEventListener('click', () => { page++; load(true); });
@@ -948,6 +1003,65 @@ async function initOrders() {
 
   await load();
   subscribeNewOrders(() => load());
+}
+
+/* =====================================================================
+   PAYMENT (รูป QR ที่ลูกค้าสแกนจ่ายหลังกดยืนยันการสั่งซื้อ)
+   ===================================================================== */
+
+async function initPayment() {
+  const form = document.getElementById('paymentForm');
+  const preview = document.getElementById('qrPreview');
+  const fileInput = form.image;
+  const errorEl = document.getElementById('paymentFormError');
+  const saveBtn = document.getElementById('savePaymentBtn');
+  let current = {};
+
+  async function load() {
+    const { data, error } = await sb.from('shop_settings').select('payment_qr_url,payment_account').eq('id', 1).maybeSingle();
+    if (error) throw error;
+    current = data || {};
+    preview.src = safeImageUrl(current.payment_qr_url);
+    form.payment_account.value = current.payment_account || '';
+    document.getElementById('removeQrWrap').hidden = !current.payment_qr_url;
+    form.remove_image.checked = false;
+    fileInput.value = '';
+  }
+
+  fileInput.addEventListener('change', () => previewFile(fileInput, preview, current.payment_qr_url));
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    errorEl.hidden = true;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'กำลังบันทึก...';
+    try {
+      const payload = { payment_account: form.payment_account.value.trim() || null, updated_at: new Date().toISOString() };
+      const file = fileInput.files[0];
+      if (file) {
+        // ไม่ย่อ/แปลงรูป QR เพื่อให้สแกนได้ชัด
+        payload.payment_qr_url = (await uploadImage(file, 'payment', { resize: false })).url;
+      } else if (form.remove_image.checked) {
+        payload.payment_qr_url = null;
+      }
+      const { error } = await sb.from('shop_settings').update(payload).eq('id', 1);
+      if (error) throw error;
+      if (current.payment_qr_url && 'payment_qr_url' in payload && payload.payment_qr_url !== current.payment_qr_url) {
+        removeImageByUrl(current.payment_qr_url);
+      }
+      showToast('บันทึกการตั้งค่าการชำระเงินแล้ว', 'success');
+      await load();
+    } catch (err) {
+      console.error(err);
+      errorEl.hidden = false;
+      errorEl.textContent = translateError(err);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'บันทึกการตั้งค่า';
+    }
+  });
+
+  await load();
 }
 
 /* =====================================================================
@@ -966,6 +1080,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (page === 'products') await initProducts();
     if (page === 'orders') await initOrders();
     if (page === 'addresses') await initAddresses();
+    if (page === 'payment') await initPayment();
   } catch (err) {
     console.error(err);
     showToast(translateError(err), 'error', 5000);

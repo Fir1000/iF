@@ -469,3 +469,24 @@ body.has-sticky-cart .line-float { bottom: 88px; }
 }
 .lang-switch span { padding: 4px 8px; border-radius: 999px; color: var(--muted); line-height: 1.2; }
 .lang-switch span.on { background: var(--green-700); color: #fff; }
+
+/* ---------- ชำระเงินด้วย QR (checkout) ---------- */
+.pay-amount {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  margin: 16px 0; padding: 14px 18px; border-radius: var(--radius-sm);
+  background: var(--green-50); border: 1px solid var(--green-200);
+}
+.pay-amount span { color: var(--ink-2); }
+.pay-amount strong { font: 700 26px var(--font-head); color: var(--green-900); }
+.pay-qr { display: grid; place-items: center; margin: 8px 0 4px; }
+.pay-qr img {
+  width: 100%; max-width: 300px; height: auto; border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: #fff; padding: 8px;
+}
+.pay-qr .notice { width: 100%; text-align: left; }
+.pay-account { margin: 8px 0 0; font-weight: 600; white-space: pre-line; }
+.wait-icon { background: var(--bamboo); box-shadow: 0 0 0 10px #fff2d6; }
+.contact-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0 14px; }
+.btn-facebook { background: #1877f2; color: #fff; }
+.btn-facebook:hover { filter: brightness(.95); }
+.order-pay { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 10px 0; }

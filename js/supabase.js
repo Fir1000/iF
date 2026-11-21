@@ -96,6 +96,18 @@ function statusBadge(status) {
   return `<span class="status-badge ${s.cls}">${escapeHtml(s.label)}</span>`;
 }
 
+// สถานะการชำระเงิน (ออเดอร์เก่าก่อนมีระบบ QR = null)
+const PAYMENT_STATUS = {
+  unpaid:  { label: 'ยังไม่ชำระเงิน',     cls: 'st-cancelled' },
+  waiting: { label: 'รอยืนยันออเดอร์',    cls: 'st-pending' },
+  paid:    { label: 'ชำระเงินแล้ว',        cls: 'st-completed' }
+};
+
+function paymentBadge(status) {
+  const s = PAYMENT_STATUS[status];
+  return s ? `<span class="status-badge ${s.cls}">${escapeHtml(s.label)}</span>` : '';
+}
+
 function translateError(err) {
   const msg = (err && (err.message || err.error_description || String(err))) || 'เกิดข้อผิดพลาด';
   if (/Failed to fetch|NetworkError|network/i.test(msg)) return 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่';

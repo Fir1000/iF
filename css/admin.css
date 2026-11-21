@@ -222,3 +222,17 @@ dialog.modal::backdrop { background: rgba(40, 20, 10, .5); }
 .store-status.open { background: #e5f6ea; color: #17733a; }
 .store-status.closed { background: #eeeeee; color: #5f5f5f; }
 .field-link { float: right; font: 500 13px var(--font); }
+
+/* ---------- ตั้งค่าการชำระเงิน / ยืนยันออเดอร์ ---------- */
+.pay-settings { max-width: 640px; }
+.qr-field { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.qr-field img {
+  width: 200px; height: 200px; object-fit: contain; border-radius: 12px;
+  border: 1px solid var(--line); background: #fff; flex: none;
+}
+.qr-field > div { flex: 1 1 220px; }
+.qr-field input[type="file"] { min-height: auto; padding: 8px; font-size: 14px; }
+.pay-cell { display: grid; gap: 6px; justify-items: start; }
+.btn-confirm-pay { background: var(--green-600); color: #fff; white-space: nowrap; }
+.btn-confirm-pay:hover:not(:disabled) { filter: brightness(.95); }
+.row-waiting { background: #fffaf0; }

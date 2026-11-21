@@ -135,6 +135,12 @@ function orderCardHtml(o) {
       </div>
       <p class="order-store">🏪 ${escapeHtml(o.store_name)}</p>
       <p class="order-date">สั่งเมื่อ ${formatDate(o.created_at)}</p>
+      ${o.payment_status && o.status !== 'cancelled' ? `
+      <div class="order-pay">
+        ${paymentBadge(o.payment_status)}
+        ${o.payment_status === 'unpaid'
+          ? `<a class="btn btn-primary btn-sm" href="checkout.html?pay=${encodeURIComponent(o.id)}">💳 ชำระเงิน</a>` : ''}
+      </div>` : ''}
       ${orderStepsHtml(o.status)}
       <ul class="order-items">
         ${items.map(i => `
@@ -159,7 +165,7 @@ async function initMyOrdersPage() {
 
   async function load() {
     const { data, error } = await sb.from('shop_orders')
-      .select('id,order_number,store_name,total_amount,status,created_at,shop_order_items(product_name,quantity,subtotal)')
+      .select('id,order_number,store_name,total_amount,status,payment_status,created_at,shop_order_items(product_name,quantity,subtotal)')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
       .limit(50);
