@@ -25,7 +25,7 @@ const ORDER_STATUS = {
   cancelled: { label: 'ยกเลิก',             cls: 'st-cancelled' }
 };
 
-const LINE_URL = 'https://line.me/ti/p/~' + encodeURIComponent(SHOP.lineId);
+const LINE_URL = 'https://line.me/ti/p/~' + encodeURIComponent(SHOP.lineId);   // ค่าเริ่มต้น — ค่าจริงมาจากหน้าตั้งค่า (SiteSettings)
 
 function isConfigured() {
   return !SUPABASE_URL.includes('YOUR_PROJECT_ID') && !SUPABASE_ANON_KEY.includes('YOUR_');
@@ -200,20 +200,95 @@ async function initAccountLink() {
   else set('my-orders.html', 'คำสั่งซื้อของฉัน');
 }
 
+/* ---------- ตั้งค่าร้าน (หลังร้าน > ⚙️ ตั้งค่า) ---------- */
+
+// ข้อความหน้าร้านที่ Admin แก้ได้: key -> ชื่อที่แสดงในหน้าตั้งค่า (ข้อความเดิมอยู่ใน HTML ที่มี data-content="key")
+const SITE_CONTENT_FIELDS = [
+  { key: 'hero_title',     label: 'หัวข้อใหญ่หน้าแรก',        def: 'หิวเมื่อไหร่ iF ไปส่งถึงที่' },
+  { key: 'hero_text',      label: 'ข้อความใต้หัวข้อหน้าแรก',  def: 'รวมร้านอร่อยไว้ในที่เดียว เลือกร้าน เลือกเมนู แล้วไรเดอร์ iF รับไปส่งถึงหน้าบ้าน ร้อน ๆ', multiline: true },
+  { key: 'stores_title',   label: 'หัวข้อส่วนร้านค้า',        def: 'ร้านค้าทั้งหมด' },
+  { key: 'about_title',    label: 'หัวข้อ "เกี่ยวกับเรา"',     def: 'ไรเดอร์ท้องถิ่น ส่งของกินด้วยใจ' },
+  { key: 'about_text1',    label: 'เกี่ยวกับเรา ย่อหน้า 1',   def: 'iF คือบริการไรเดอร์ส่งของกิน รับอาหารจากร้านอร่อยใกล้บ้าน แล้วส่งตรงถึงหน้าประตูคุณ ไม่ต้องออกไปต่อคิวเอง', multiline: true },
+  { key: 'about_text2',    label: 'เกี่ยวกับเรา ย่อหน้า 2',   def: 'เราตั้งใจให้ทุกคนได้กินของอร่อยแบบสะดวก และช่วยให้ร้านอาหารเล็ก ๆ ในพื้นที่ขายได้มากขึ้น', multiline: true },
+  { key: 'contact_title',  label: 'หัวข้อส่วนติดต่อ',         def: 'สั่งหรือสอบถามได้ทุกช่องทาง' },
+  { key: 'footer_tagline', label: 'คำโปรยท้ายเว็บ (ทุกหน้า)', def: 'ไรเดอร์ส่งของกิน' }
+];
+
+const SETTINGS_CACHE_KEY = 'if_site_settings';
+
+function lineUrlFor(id) {
+  return 'https://line.me/ti/p/~' + encodeURIComponent(String(id || SHOP.lineId).trim());
+}
+function safeHttpUrl(url) {
+  try { const u = new URL(url); return /^https?:$/.test(u.protocol) ? u.href : ''; } catch { return ''; }
+}
+function mapUrlFor(s) {
+  return safeHttpUrl(s.map_url) ||
+    (s.location_text ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.location_text) : '');
+}
+
+const SiteSettings = {
+  data: {},
+
+  cached() {
+    try { return JSON.parse(sessionStorage.getItem(SETTINGS_CACHE_KEY)) || {}; } catch { return {}; }
+  },
+
+  async fetch() {
+    const { data, error } = await sb.from('shop_settings')
+      .select('line_id,facebook_url,messenger_url,location_text,map_url,site_content').eq('id', 1).maybeSingle();
+    if (error) throw error;   // ยังไม่ได้รัน SQL ตั้งค่า -> ใช้ค่าเดิมในโค้ด
+    return data || {};
+  },
+
+  apply(s = {}) {
+    this.data = s;
+    const ext = a => { a.target = '_blank'; a.rel = 'noopener'; };
+    const lineId = (s.line_id || SHOP.lineId).trim();
+    const facebook = safeHttpUrl(s.facebook_url) || SHOP.facebook;
+    const messenger = safeHttpUrl(s.messenger_url) || facebook;
+
+    document.querySelectorAll('[data-line-link]').forEach(a => { a.href = lineUrlFor(lineId); ext(a); });
+    document.querySelectorAll('[data-line-id]').forEach(el => { el.textContent = lineId; });
+    document.querySelectorAll('[data-facebook-link]').forEach(a => { a.href = facebook; ext(a); });
+    document.querySelectorAll('[data-messenger-link]').forEach(a => { a.href = messenger; ext(a); });
+
+    const loc = (s.location_text || '').trim();
+    const map = mapUrlFor(s);
+    document.querySelectorAll('[data-location-wrap]').forEach(el => { el.hidden = !loc; });
+    document.querySelectorAll('[data-location]').forEach(el => { el.textContent = loc; });
+    document.querySelectorAll('[data-map-link]').forEach(a => { if (map) { a.href = map; ext(a); } });
+
+    // ภาษาอังกฤษ: ใช้คำแปลเดิม (ข้อความที่ Admin แก้เป็นภาษาไทย)
+    if (typeof I18N !== 'undefined' && I18N.lang === 'en') return;
+    const content = s.site_content || {};
+    document.querySelectorAll('[data-content]').forEach(el => {
+      const key = el.dataset.content;
+      if (!el.dataset.contentDefault) el.dataset.contentDefault = el.textContent.trim();
+      const v = typeof content[key] === 'string' ? content[key].trim() : '';
+      el.textContent = v || el.dataset.contentDefault;
+    });
+  },
+
+  async init() {
+    if (document.body.classList.contains('admin')) return;
+    this.apply(this.cached());
+    if (!isConfigured()) return;
+    try {
+      const s = await this.fetch();
+      try { sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(s)); } catch { /* ignore */ }
+      this.apply(s);
+    } catch (err) {
+      console.warn('โหลดการตั้งค่าร้านไม่สำเร็จ ใช้ค่าเริ่มต้น', err);
+    }
+  }
+};
+
 /* ---------- UI ร่วมของหน้าลูกค้า ---------- */
 
 function initCommonUI() {
-  // ลิงก์ LINE ทุกจุด
-  document.querySelectorAll('[data-line-link]').forEach(a => {
-    a.href = LINE_URL;
-    a.target = '_blank';
-    a.rel = 'noopener';
-  });
-  document.querySelectorAll('[data-facebook-link]').forEach(a => {
-    a.href = SHOP.facebook;
-    a.target = '_blank';
-    a.rel = 'noopener';
-  });
+  // ลิงก์ LINE / เพจ / ที่ตั้ง / ข้อความหน้าร้าน ตามที่ Admin ตั้งค่าไว้
+  SiteSettings.init();
   const buddhistYear = !(typeof I18N !== 'undefined' && I18N.lang === 'en');
   document.querySelectorAll('[data-year]').forEach(el => { el.textContent = new Date().getFullYear() + (buddhistYear ? 543 : 0); });
   initAccountLink();

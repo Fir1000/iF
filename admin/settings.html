@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#c2410c">
+  <title>ตั้งค่า | ผู้ดูแลระบบ iF</title>
+  <link rel="icon" href="../assets/logo.svg?v=2" type="image/svg+xml">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=13">
+  <link rel="stylesheet" href="../css/admin.css?v=14">
+</head>
+<body class="admin" data-page="settings">
+
+<div class="admin-loading" id="adminLoading">กำลังตรวจสอบสิทธิ์...</div>
+
+<div id="adminShell" hidden>
+  <aside class="admin-sidebar" id="adminSidebar" aria-label="เมนูหลังร้าน">
+    <div class="side-brand"><img src="../assets/logo.svg?v=2" alt=""><span>ผู้ดูแลระบบ<br><small>iF รวมร้านค้า</small></span></div>
+    <a href="dashboard.html">📊 Dashboard</a>
+    <a href="stores.html">🏪 ร้านค้า / หมวดหมู่</a>
+    <a href="products.html">📦 จัดการสินค้า</a>
+    <a href="orders.html">🛒 คำสั่งซื้อ</a>
+    <a href="addresses.html">📍 ที่อยู่ / สถานที่รับ</a>
+    <a href="payment.html">💳 ตั้งค่าการชำระเงิน</a>
+    <a href="../index.html" target="_blank" rel="noopener">🌐 ดูหน้าเว็บ</a>
+    <div class="side-spacer"></div>
+    <a href="settings.html" class="side-settings active" aria-current="page"><span aria-hidden="true">⚙️</span> ตั้งค่า</a>
+    <button type="button" class="logout" id="logoutBtn">🚪 ออกจากระบบ</button>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop" hidden></div>
+
+  <header class="admin-topbar">
+    <button type="button" class="admin-menu-btn" id="adminMenuBtn" aria-label="เปิดเมนู">☰</button>
+    <a class="brand-mini" href="dashboard.html"><img src="../assets/logo.svg?v=2" alt="">ผู้ดูแลระบบ</a>
+    <span class="admin-user" id="adminEmail"></span>
+  </header>
+
+  <main class="admin-main">
+
+    <div class="admin-head">
+      <div><h1>ตั้งค่าร้าน</h1><p>ช่องทางติดต่อ ที่ตั้ง และข้อความที่แสดงบนหน้าเว็บ · รายชื่อผู้ดูแลระบบ</p></div>
+    </div>
+
+    <div class="settings-grid">
+      <form class="panel" id="settingsForm" novalidate>
+        <h2>💬 ช่องทางติดต่อ</h2>
+        <div class="field">
+          <label for="sLine">LINE ID ติดต่อร้าน</label>
+          <input id="sLine" name="line_id" maxlength="60" placeholder="เช่น 141414dw หรือ @shopname" autocomplete="off">
+          <div class="field-hint">ใช้กับปุ่ม "สั่งทาง LINE" ทุกหน้า · <a href="#" target="_blank" rel="noopener" data-preview="line">ทดสอบเปิดลิงก์</a></div>
+        </div>
+        <div class="field">
+          <label for="sFacebook">ลิงก์เพจ Facebook</label>
+          <input id="sFacebook" name="facebook_url" type="url" inputmode="url" placeholder="https://www.facebook.com/..." autocomplete="off">
+          <div class="field-hint"><a href="#" target="_blank" rel="noopener" data-preview="facebook">ทดสอบเปิดลิงก์</a></div>
+        </div>
+        <div class="field">
+          <label for="sMessenger">ลิงก์แชท Messenger ของเพจ <span class="muted">(ไม่บังคับ)</span></label>
+          <input id="sMessenger" name="messenger_url" type="url" inputmode="url" placeholder="https://m.me/..." autocomplete="off">
+          <div class="field-hint">ปุ่ม "เพจ" ในหน้ารอยืนยันออเดอร์จะเปิดลิงก์นี้ เพื่อให้ลูกค้าส่งสลิป (ว่างไว้ = เปิดหน้าเพจแทน)</div>
+        </div>
+
+        <h2 class="settings-sub">📍 ที่ตั้งร้าน</h2>
+        <div class="field">
+          <label for="sLocation">ที่ตั้ง (ข้อความที่แสดงบนหน้าเว็บ)</label>
+          <input id="sLocation" name="location_text" maxlength="200" placeholder="เช่น ต.ปุโรง อ.กรงปินัง จ.ยะลา">
+          <div class="field-hint">ว่างไว้ = ไม่แสดงที่ตั้ง</div>
+        </div>
+        <div class="field">
+          <label for="sMap">ลิงก์ Google Maps <span class="muted">(ไม่บังคับ)</span></label>
+          <input id="sMap" name="map_url" type="url" inputmode="url" placeholder="https://maps.app.goo.gl/..." autocomplete="off">
+          <div class="field-hint">เปิด Google Maps → ปักหมุดร้าน → กด "แชร์" → คัดลอกลิงก์มาวาง (ว่างไว้ = ค้นหาจากข้อความที่ตั้ง) · <a href="#" target="_blank" rel="noopener" data-preview="map">ทดสอบเปิดแผนที่</a></div>
+        </div>
+
+        <h2 class="settings-sub">📝 ข้อความบนหน้าเว็บ</h2>
+        <p class="muted settings-note">แก้ข้อความที่แสดงบนหน้าเว็บได้ · ช่องที่ลบจนว่างจะกลับไปใช้ข้อความเดิม</p>
+        <div id="contentFields"><p class="muted">กำลังโหลด...</p></div>
+
+        <div class="notice notice-error" id="settingsError" hidden></div>
+        <button type="submit" class="btn btn-primary btn-block" id="saveSettingsBtn">💾 บันทึกการตั้งค่า</button>
+        <p class="toolbar-meta settings-updated" id="settingsUpdated"></p>
+      </form>
+
+      <section class="panel">
+        <h2>🔐 ผู้ดูแลระบบ (Admin)</h2>
+        <p class="muted settings-note">อีเมลในรายชื่อนี้เข้าหน้าหลังร้านได้ · ผู้ใช้ต้อง<a href="../login.html?tab=signup" target="_blank" rel="noopener">สมัครสมาชิก</a>ด้วยอีเมลนั้นก่อน จึงจะเพิ่มเป็น Admin ได้</p>
+        <form class="admin-add" id="adminAddForm" novalidate>
+          <input type="email" name="email" inputmode="email" placeholder="อีเมลที่ต้องการเพิ่มเป็น Admin" aria-label="อีเมล Admin ใหม่" autocomplete="off">
+          <button type="submit" class="btn btn-primary">➕ เพิ่ม</button>
+        </form>
+        <ul class="admin-list" id="adminList"><li class="muted">กำลังโหลด...</li></ul>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/supabase.js?v=17"></script>
+<script src="../js/admin.js?v=15"></script>
+</body>
+</html>

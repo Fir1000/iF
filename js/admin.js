@@ -1065,6 +1065,152 @@ async function initPayment() {
 }
 
 /* =====================================================================
+   SETTINGS (ช่องทางติดต่อ ที่ตั้ง ข้อความหน้าเว็บ + รายชื่อ Admin)
+   ===================================================================== */
+
+const SETUP_SQL_HINT = 'ยังไม่ได้รันไฟล์ sql/2026-11-24_shop_settings.sql ใน Supabase > SQL Editor';
+
+async function initSettings() {
+  const form = document.getElementById('settingsForm');
+  const fieldsEl = document.getElementById('contentFields');
+  const errorEl = document.getElementById('settingsError');
+  const saveBtn = document.getElementById('saveSettingsBtn');
+  const updatedEl = document.getElementById('settingsUpdated');
+  const missingSetup = err => /column|does not exist|schema cache|function/i.test(err?.message || '');
+
+  fieldsEl.innerHTML = SITE_CONTENT_FIELDS.map(f => `
+    <div class="field">
+      <label for="c_${f.key}">${escapeHtml(f.label)}</label>
+      ${f.multiline
+        ? `<textarea id="c_${f.key}" data-key="${f.key}" maxlength="400" rows="2" placeholder="${escapeHtml(f.def)}"></textarea>`
+        : `<input id="c_${f.key}" data-key="${f.key}" maxlength="120" placeholder="${escapeHtml(f.def)}">`}
+    </div>`).join('');
+
+  // ลิงก์ "ทดสอบเปิด" ใช้ค่าที่กำลังพิมพ์อยู่
+  form.querySelectorAll('[data-preview]').forEach(a => a.addEventListener('click', e => {
+    const kind = a.dataset.preview;
+    const url = kind === 'line' ? lineUrlFor(form.line_id.value)
+      : kind === 'facebook' ? safeHttpUrl(form.facebook_url.value.trim())
+      : mapUrlFor({ map_url: form.map_url.value.trim(), location_text: form.location_text.value.trim() });
+    if (!url) { e.preventDefault(); showToast('กรุณากรอกข้อมูลให้ถูกต้องก่อน', 'error'); return; }
+    a.href = url;
+  }));
+
+  async function load() {
+    const { data, error } = await sb.from('shop_settings')
+      .select('line_id,facebook_url,messenger_url,location_text,map_url,site_content,updated_at').eq('id', 1).maybeSingle();
+    if (error) {
+      if (missingSetup(error)) {
+        errorEl.hidden = false;
+        errorEl.textContent = SETUP_SQL_HINT;
+        saveBtn.disabled = true;
+        return;
+      }
+      throw error;
+    }
+    const d = data || {};
+    form.line_id.value = d.line_id || '';
+    form.facebook_url.value = d.facebook_url || '';
+    form.messenger_url.value = d.messenger_url || '';
+    form.location_text.value = d.location_text || '';
+    form.map_url.value = d.map_url || '';
+    const content = d.site_content || {};
+    fieldsEl.querySelectorAll('[data-key]').forEach(el => { el.value = content[el.dataset.key] || ''; });
+    updatedEl.textContent = d.updated_at ? 'บันทึกล่าสุด ' + formatDate(d.updated_at) : '';
+  }
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    errorEl.hidden = true;
+    const val = name => form[name].value.trim();
+    for (const [name, label] of [['facebook_url', 'ลิงก์เพจ Facebook'], ['messenger_url', 'ลิงก์ Messenger'], ['map_url', 'ลิงก์ Google Maps']]) {
+      if (val(name) && !safeHttpUrl(val(name))) {
+        errorEl.hidden = false;
+        errorEl.textContent = `${label} ต้องขึ้นต้นด้วย https://`;
+        form[name].focus();
+        return;
+      }
+    }
+    const content = {};
+    fieldsEl.querySelectorAll('[data-key]').forEach(el => {
+      const v = el.value.trim();
+      const def = SITE_CONTENT_FIELDS.find(f => f.key === el.dataset.key)?.def;
+      if (v && v !== def) content[el.dataset.key] = v;
+    });
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'กำลังบันทึก...';
+    try {
+      const { error } = await sb.from('shop_settings').update({
+        line_id: val('line_id').replace(/^~/, '') || null,
+        facebook_url: val('facebook_url') || null,
+        messenger_url: val('messenger_url') || null,
+        location_text: val('location_text') || null,
+        map_url: val('map_url') || null,
+        site_content: content,
+        updated_at: new Date().toISOString()
+      }).eq('id', 1);
+      if (error) throw error;
+      try { sessionStorage.removeItem(SETTINGS_CACHE_KEY); } catch { /* ignore */ }
+      showToast('บันทึกการตั้งค่าแล้ว หน้าเว็บจะใช้ค่าใหม่ทันที', 'success');
+      await load();
+    } catch (err) {
+      console.error(err);
+      errorEl.hidden = false;
+      errorEl.textContent = missingSetup(err) ? SETUP_SQL_HINT : translateError(err);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '💾 บันทึกการตั้งค่า';
+    }
+  });
+
+  /* ---------- รายชื่อ Admin ---------- */
+  const listEl = document.getElementById('adminList');
+  const addForm = document.getElementById('adminAddForm');
+  const me = Admin.session.user.id;
+
+  async function loadAdmins() {
+    const { data, error } = await sb.rpc('shop_admin_list');
+    if (error) {
+      listEl.innerHTML = `<li class="notice notice-error">${escapeHtml(missingSetup(error) ? SETUP_SQL_HINT : translateError(error))}</li>`;
+      return;
+    }
+    listEl.innerHTML = data.map(a => `
+      <li>
+        <span class="admin-email">${escapeHtml(a.email || '-')}${a.user_id === me ? ' <span class="badge-me">คุณ</span>' : ''}</span>
+        ${a.user_id === me || data.length <= 1 ? ''
+          : `<button type="button" class="btn btn-sm btn-danger-ghost" data-remove="${escapeHtml(a.user_id)}" data-email="${escapeHtml(a.email || '')}">ลบสิทธิ์</button>`}
+      </li>`).join('');
+  }
+
+  listEl.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-remove]');
+    if (!btn) return;
+    if (!confirm(`ลบสิทธิ์ Admin ของ ${btn.dataset.email}?\nบัญชีนี้จะยังสั่งซื้อได้ตามปกติ แต่เข้าหลังร้านไม่ได้`)) return;
+    btn.disabled = true;
+    const { error } = await sb.rpc('shop_admin_remove', { p_user_id: btn.dataset.remove });
+    if (error) { showToast(translateError(error), 'error', 5000); btn.disabled = false; return; }
+    showToast('ลบสิทธิ์ Admin แล้ว', 'success');
+    loadAdmins();
+  });
+
+  addForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = addForm.email.value.trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) { showToast('รูปแบบอีเมลไม่ถูกต้อง', 'error'); return; }
+    const btn = addForm.querySelector('button');
+    btn.disabled = true;
+    const { error } = await sb.rpc('shop_admin_add', { p_email: email });
+    btn.disabled = false;
+    if (error) { showToast(missingSetup(error) ? SETUP_SQL_HINT : translateError(error), 'error', 5000); return; }
+    addForm.reset();
+    showToast(`เพิ่ม ${email} เป็น Admin แล้ว`, 'success');
+    loadAdmins();
+  });
+
+  await Promise.all([load(), loadAdmins()]);
+}
+
+/* =====================================================================
    BOOT
    ===================================================================== */
 
@@ -1081,6 +1227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (page === 'orders') await initOrders();
     if (page === 'addresses') await initAddresses();
     if (page === 'payment') await initPayment();
+    if (page === 'settings') await initSettings();
   } catch (err) {
     console.error(err);
     showToast(translateError(err), 'error', 5000);

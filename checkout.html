@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=14">
-  <script src="js/i18n.js?v=3"></script>
+  <script src="js/i18n.js?v=4"></script>
 </head>
 <body>
 
@@ -112,7 +112,7 @@
     </dl>
     <p class="field-hint">ส่งสลิปหรือสอบถามได้ทางเพจหรือ LINE (แจ้งเลขคำสั่งซื้อด้วย)</p>
     <div class="contact-actions">
-      <a href="#" class="btn btn-facebook btn-lg" data-facebook-link>📘 เพจ</a>
+      <a href="#" class="btn btn-facebook btn-lg" data-messenger-link>📘 เพจ</a>
       <a href="#" class="btn btn-line btn-lg" data-line-link>💬 LINE</a>
     </div>
     <div class="success-actions">
@@ -127,7 +127,7 @@
     <div class="footer-grid">
       <div>
         <h3>iF</h3>
-        <p>ไรเดอร์ส่งของกิน</p>
+        <p data-content="footer_tagline">ไรเดอร์ส่งของกิน</p>
       </div>
       <div>
         <h3>เมนู</h3>
@@ -140,8 +140,9 @@
       <div>
         <h3>ติดต่อ</h3>
         <ul>
-          <li><a href="#" data-line-link>LINE: 141414dw</a></li>
+          <li><a href="#" data-line-link>LINE: <span data-line-id>141414dw</span></a></li>
           <li><a href="#" data-facebook-link>Facebook</a></li>
+          <li data-location-wrap hidden><a href="#" data-map-link>📍 <span data-location></span></a></li>
         </ul>
       </div>
     </div>
@@ -155,7 +156,7 @@
 </a>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=16"></script>
+<script src="js/supabase.js?v=17"></script>
 <script src="js/app-extras.js?v=1"></script>
 <script src="js/cart.js?v=11"></script>
 <script src="js/checkout.js?v=12"></script>
