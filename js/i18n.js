@@ -39,6 +39,7 @@ const I18N = {
     'เพจ iF': 'iF page',
     'ดูตะกร้า →': 'View cart →',
     'สั่งทาง LINE': 'Order via LINE',
+    'ติดต่อทาง LINE': 'Contact via LINE',
     'สั่งอาหารทาง LINE': 'Order via LINE',
     '{n} ชิ้น': '{n} items',
 
@@ -196,7 +197,7 @@ const I18N = {
     'รอยืนยันออเดอร์': 'Waiting for confirmation',
     'ร้านกำลังตรวจสอบยอดโอน เมื่อยืนยันแล้วสถานะจะเปลี่ยนเป็น "รับออเดอร์แล้ว"': 'The store is checking your transfer. Once confirmed, the status changes to "Accepted".',
     'ส่งสลิปหรือสอบถามได้ทางเพจหรือ LINE (แจ้งเลขคำสั่งซื้อด้วย)': 'Send your slip or ask us via our page or LINE (include your order number)',
-    '📘 เพจ': '📘 Page',
+    '📘 Facebook': '📘 Facebook',
     '💬 LINE': '💬 LINE',
     'ยังไม่ชำระเงิน': 'Not paid',
     'ชำระเงินแล้ว': 'Paid',
