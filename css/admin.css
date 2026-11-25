@@ -254,3 +254,5 @@ dialog.modal::backdrop { background: rgba(40, 20, 10, .5); }
 .admin-list li:first-child { border-top: 0; }
 .admin-email { overflow-wrap: anywhere; font-size: 15px; }
 .badge-me { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--green-100, #e6f4ea); color: var(--green-900, #14532d); font-size: 12px; }
+.settings-row { display: grid; gap: 0 14px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.contact-cell { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; margin-top: 2px; }

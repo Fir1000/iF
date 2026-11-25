@@ -12,8 +12,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/style.css?v=13">
-  <link rel="stylesheet" href="../css/admin.css?v=14">
+  <link rel="stylesheet" href="../css/style.css?v=15">
+  <link rel="stylesheet" href="../css/admin.css?v=15">
 </head>
 <body class="admin" data-page="settings">
 
@@ -44,7 +44,7 @@
   <main class="admin-main">
 
     <div class="admin-head">
-      <div><h1>ตั้งค่าร้าน</h1><p>ช่องทางติดต่อ ที่ตั้ง และข้อความที่แสดงบนหน้าเว็บ · รายชื่อผู้ดูแลระบบ</p></div>
+      <div><h1>ตั้งค่าร้าน</h1><p>ช่องทางติดต่อ ค่าส่ง ที่ตั้ง และข้อความที่แสดงบนหน้าเว็บ · รายชื่อผู้ดูแลระบบ</p></div>
     </div>
 
     <div class="settings-grid">
@@ -65,6 +65,21 @@
           <input id="sMessenger" name="messenger_url" type="url" inputmode="url" placeholder="https://m.me/..." autocomplete="off">
           <div class="field-hint">ปุ่ม "เพจ" ในหน้ารอยืนยันออเดอร์จะเปิดลิงก์นี้ เพื่อให้ลูกค้าส่งสลิป (ว่างไว้ = เปิดหน้าเพจแทน)</div>
         </div>
+
+        <h2 class="settings-sub">🛵 ค่าส่ง</h2>
+        <div class="settings-row">
+          <div class="field">
+            <label for="sFee">ค่าส่ง (บาท)</label>
+            <input id="sFee" name="delivery_fee" type="number" inputmode="decimal" min="0" step="1" placeholder="0">
+            <div class="field-hint">0 = ไม่คิดค่าส่ง</div>
+          </div>
+          <div class="field">
+            <label for="sFreeMin">สั่งครบกี่บาท ส่งฟรี</label>
+            <input id="sFreeMin" name="free_delivery_min" type="number" inputmode="decimal" min="0" step="1" placeholder="79">
+            <div class="field-hint">ยอดค่าสินค้าถึงเท่านี้ = ไม่คิดค่าส่ง</div>
+          </div>
+        </div>
+        <p class="muted settings-note" id="feePreview"></p>
 
         <h2 class="settings-sub">📍 ที่ตั้งร้าน</h2>
         <div class="field">
@@ -101,7 +116,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../js/supabase.js?v=17"></script>
-<script src="../js/admin.js?v=15"></script>
+<script src="../js/supabase.js?v=18"></script>
+<script src="../js/admin.js?v=16"></script>
 </body>
 </html>

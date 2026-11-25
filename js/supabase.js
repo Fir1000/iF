@@ -227,6 +227,37 @@ function mapUrlFor(s) {
     (s.location_text ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.location_text) : '');
 }
 
+/* ---------- ค่าส่ง (ร้านตั้งค่าส่ง + ยอดขั้นต่ำส่งฟรี ในหลังร้าน) — เซิร์ฟเวอร์คำนวณซ้ำตอนสั่งจริง ---------- */
+
+function deliveryConfig() {
+  const s = (typeof SiteSettings !== 'undefined' && SiteSettings.data) || {};
+  return { fee: Math.max(0, Number(s.delivery_fee) || 0), min: Math.max(0, Number(s.free_delivery_min) || 0) };
+}
+function deliveryFeeFor(subtotal) {
+  const { fee, min } = deliveryConfig();
+  return fee > 0 && subtotal < min ? fee : 0;
+}
+function tr(template, params) { return typeof t === 'function' ? t(template, params) : template.replace(/\{(\w+)\}/g, (_, k) => params[k]); }
+function freeDeliveryText() {
+  const { fee, min } = deliveryConfig();
+  if (!fee) return '';
+  return min > 0 ? tr('🛵 สั่งครบ {p} ขึ้นไป ส่งฟรี!', { p: formatPrice(min) }) : '';
+}
+// แถว ค่าสินค้า / ค่าส่ง / ยอดรวม สำหรับสรุปในตะกร้าและหน้าสั่งซื้อ
+function deliverySummaryHtml(subtotal, totalLabel = 'ยอดรวม') {
+  const { fee, min } = deliveryConfig();
+  const charged = deliveryFeeFor(subtotal);
+  if (!fee) return `<div class="summary-total"><span>${escapeHtml(totalLabel)}</span><strong>${formatPrice(subtotal)}</strong></div>`;
+  const hint = charged
+    ? `<p class="delivery-hint">${escapeHtml(tr('สั่งเพิ่มอีก {p} ส่งฟรี!', { p: formatPrice(min - subtotal) }))}</p>`
+    : `<p class="delivery-hint free">🎉 ได้ส่งฟรี</p>`;
+  return `
+    <div class="summary-row"><span>ค่าสินค้า</span><span>${formatPrice(subtotal)}</span></div>
+    <div class="summary-row"><span>ค่าส่ง</span><span>${charged ? formatPrice(charged) : '<span class="free-tag">ส่งฟรี</span>'}</span></div>
+    ${hint}
+    <div class="summary-total"><span>${escapeHtml(totalLabel)}</span><strong>${formatPrice(subtotal + charged)}</strong></div>`;
+}
+
 const SiteSettings = {
   data: {},
 
@@ -235,8 +266,8 @@ const SiteSettings = {
   },
 
   async fetch() {
-    const { data, error } = await sb.from('shop_settings')
-      .select('line_id,facebook_url,messenger_url,location_text,map_url,site_content').eq('id', 1).maybeSingle();
+    // select('*') = ยังใช้ได้แม้บางคอลัมน์ยังไม่ได้สร้าง (ยังไม่รัน SQL ใหม่)
+    const { data, error } = await sb.from('shop_settings').select('*').eq('id', 1).maybeSingle();
     if (error) throw error;   // ยังไม่ได้รัน SQL ตั้งค่า -> ใช้ค่าเดิมในโค้ด
     return data || {};
   },
@@ -258,6 +289,11 @@ const SiteSettings = {
     document.querySelectorAll('[data-location-wrap]').forEach(el => { el.hidden = !loc; });
     document.querySelectorAll('[data-location]').forEach(el => { el.textContent = loc; });
     document.querySelectorAll('[data-map-link]').forEach(a => { if (map) { a.href = map; ext(a); } });
+
+    // ส่งฟรีเมื่อสั่งครบ (แสดงเฉพาะเมื่อร้านตั้งค่าส่งไว้)
+    const freeText = freeDeliveryText();
+    document.querySelectorAll('[data-free-delivery]').forEach(el => { el.hidden = !freeText; el.textContent = freeText; });
+    document.dispatchEvent(new CustomEvent('sitesettings', { detail: s }));
 
     // ภาษาอังกฤษ: ใช้คำแปลเดิม (ข้อความที่ Admin แก้เป็นภาษาไทย)
     if (typeof I18N !== 'undefined' && I18N.lang === 'en') return;

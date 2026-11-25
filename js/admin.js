@@ -842,7 +842,7 @@ async function initOrders() {
   async function load(append = false) {
     if (!append) page = 0;
     let query = sb.from('shop_orders')
-      .select('id,order_number,store_id,store_name,customer_name,customer_email,phone,address,note,total_amount,status,payment_status,paid_at,payment_confirmed_at,created_at', { count: 'exact' })
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
 
@@ -862,6 +862,12 @@ async function initOrders() {
     render();
   }
 
+  // ช่องทางติดต่อที่ลูกค้ากรอก: ลิงก์ (Facebook) กดเปิดได้ / ข้อความอื่นแสดงตามที่กรอก
+  function contactHtml(c) {
+    const url = safeHttpUrl(String(c).trim());
+    return url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(c)}</a>` : escapeHtml(c);
+  }
+
   function payCell(o) {
     if (!o.payment_status) return '<span class="muted">-</span>';
     const canConfirm = o.status !== 'cancelled' && o.payment_status !== 'paid';
@@ -875,7 +881,8 @@ async function initOrders() {
         <td data-label="เลข Order"><strong class="mono">${escapeHtml(o.order_number)}</strong></td>
         <td data-label="ร้านค้า">${escapeHtml(o.store_name)}</td>
         <td data-label="ชื่อลูกค้า">${escapeHtml(o.customer_name)}</td>
-        <td data-label="เบอร์โทร"><a href="tel:${escapeHtml(o.phone)}">${escapeHtml(o.phone)}</a></td>
+        <td data-label="เบอร์โทร / ติดต่อ"><a href="tel:${escapeHtml(o.phone)}">${escapeHtml(o.phone)}</a>
+          ${o.contact ? `<div class="contact-cell">💬 ${contactHtml(o.contact)}</div>` : ''}</td>
         <td data-label="ยอดรวม" class="num">${formatPrice(o.total_amount)}</td>
         <td data-label="วันที่สั่ง">${formatDate(o.created_at)}</td>
         <td data-label="ชำระเงิน">${payCell(o)}</td>
@@ -941,6 +948,7 @@ async function initOrders() {
         <dt>ลูกค้า</dt><dd>${escapeHtml(order.customer_name)}</dd>
         <dt>อีเมลผู้สั่ง</dt><dd>${escapeHtml(order.customer_email || '-')}</dd>
         <dt>เบอร์โทร</dt><dd><a href="tel:${escapeHtml(order.phone)}">${escapeHtml(order.phone)}</a></dd>
+        <dt>Facebook / LINE ID</dt><dd>${order.contact ? contactHtml(order.contact) : '-'}</dd>
         <dt>ที่อยู่ / สถานที่รับ</dt><dd class="pre">${escapeHtml(order.address)}</dd>
         <dt>หมายเหตุ</dt><dd class="pre">${escapeHtml(order.note || '-')}</dd>
         <dt>วันที่สั่ง</dt><dd>${formatDate(order.created_at)}</dd>
@@ -957,6 +965,7 @@ async function initOrders() {
               <td class="num">${i.quantity}</td><td class="num">${formatPrice(i.subtotal)}</td></tr>`).join('')}
         </tbody>
       </table>
+      ${Number(order.delivery_fee) > 0 ? `<div class="summary-row"><span>ค่าส่ง</span><span>${formatPrice(order.delivery_fee)}</span></div>` : ''}
       <div class="summary-total"><span>ยอดรวม</span><strong>${formatPrice(order.total_amount)}</strong></div>`}`;
   }
 
@@ -1096,9 +1105,20 @@ async function initSettings() {
     a.href = url;
   }));
 
+  // ตัวอย่างข้อความที่ลูกค้าจะเห็น
+  const feePreviewEl = document.getElementById('feePreview');
+  function feePreview() {
+    const fee = Number(form.delivery_fee.value) || 0;
+    const min = Number(form.free_delivery_min.value) || 0;
+    feePreviewEl.textContent = !fee ? 'ตอนนี้: ส่งฟรีทุกออเดอร์ (ไม่แสดงป้ายส่งฟรี)'
+      : min > 0 ? `ลูกค้าจะเห็น: "🛵 สั่งครบ ${formatPrice(min)} ขึ้นไป ส่งฟรี!" · ต่ำกว่านั้นคิดค่าส่ง ${formatPrice(fee)}`
+      : `คิดค่าส่ง ${formatPrice(fee)} ทุกออเดอร์`;
+  }
+  form.delivery_fee.addEventListener('input', feePreview);
+  form.free_delivery_min.addEventListener('input', feePreview);
+
   async function load() {
-    const { data, error } = await sb.from('shop_settings')
-      .select('line_id,facebook_url,messenger_url,location_text,map_url,site_content,updated_at').eq('id', 1).maybeSingle();
+    const { data, error } = await sb.from('shop_settings').select('*').eq('id', 1).maybeSingle();
     if (error) {
       if (missingSetup(error)) {
         errorEl.hidden = false;
@@ -1114,6 +1134,9 @@ async function initSettings() {
     form.messenger_url.value = d.messenger_url || '';
     form.location_text.value = d.location_text || '';
     form.map_url.value = d.map_url || '';
+    form.delivery_fee.value = d.delivery_fee ?? '';
+    form.free_delivery_min.value = d.free_delivery_min ?? '';
+    feePreview();
     const content = d.site_content || {};
     fieldsEl.querySelectorAll('[data-key]').forEach(el => { el.value = content[el.dataset.key] || ''; });
     updatedEl.textContent = d.updated_at ? 'บันทึกล่าสุด ' + formatDate(d.updated_at) : '';
@@ -1131,6 +1154,13 @@ async function initSettings() {
         return;
       }
     }
+    const fee = Number(val('delivery_fee') || 0);
+    const freeMin = Number(val('free_delivery_min') || 0);
+    if (!(fee >= 0) || !(freeMin >= 0)) {
+      errorEl.hidden = false;
+      errorEl.textContent = 'ค่าส่งและยอดส่งฟรีต้องเป็นตัวเลข 0 ขึ้นไป';
+      return;
+    }
     const content = {};
     fieldsEl.querySelectorAll('[data-key]').forEach(el => {
       const v = el.value.trim();
@@ -1147,6 +1177,8 @@ async function initSettings() {
         location_text: val('location_text') || null,
         map_url: val('map_url') || null,
         site_content: content,
+        delivery_fee: fee,
+        free_delivery_min: freeMin,
         updated_at: new Date().toISOString()
       }).eq('id', 1);
       if (error) throw error;

@@ -181,8 +181,10 @@ window.addEventListener('storage', e => {
 /* ---------- หน้า cart.html ---------- */
 
 let cartStoreOpen = true;
+let cartNotes = [];
 
 function renderCartPage(notes = []) {
+  cartNotes = notes;
   const itemsEl = document.getElementById('cartItems');
   const summaryEl = document.getElementById('cartSummary');
   const notesEl = document.getElementById('cartNotes');
@@ -239,7 +241,7 @@ function renderCartPage(notes = []) {
         <li><span>${escapeHtml(it.name)}<small>${formatPrice(it.price)} × ${it.quantity}</small></span>
             <strong>${formatPrice(it.price * it.quantity)}</strong></li>`).join('')}
     </ul>
-    <div class="summary-total"><span>ยอดรวมทั้งหมด</span><strong>${formatPrice(Cart.total())}</strong></div>
+    ${deliverySummaryHtml(Cart.total(), 'ยอดรวมทั้งหมด')}
     ${cartStoreOpen
       ? '<a href="checkout.html" class="btn btn-primary btn-block btn-lg">สั่งซื้อ</a>'
       : '<button type="button" class="btn btn-primary btn-block btn-lg" disabled>ร้านปิดอยู่</button>'}
@@ -284,4 +286,8 @@ async function initCartPage() {
 document.addEventListener('DOMContentLoaded', () => {
   updateCartUI();
   initCartPage();
+});
+// ค่าส่งโหลดเสร็จ -> คำนวณสรุปใหม่
+document.addEventListener('sitesettings', () => {
+  if (document.getElementById('cartPage')) renderCartPage(cartNotes);
 });

@@ -147,6 +147,7 @@ function orderCardHtml(o) {
           <li><span>${escapeHtml(i.product_name)}<small>× ${i.quantity}</small></span>
               <strong>${formatPrice(i.subtotal)}</strong></li>`).join('')}
       </ul>
+      ${Number(o.delivery_fee) > 0 ? `<div class="summary-row"><span>ค่าส่ง</span><span>${formatPrice(o.delivery_fee)}</span></div>` : ''}
       <div class="summary-total"><span>ยอดรวม</span><strong>${formatPrice(o.total_amount)}</strong></div>
     </article>`;
 }
@@ -165,7 +166,7 @@ async function initMyOrdersPage() {
 
   async function load() {
     const { data, error } = await sb.from('shop_orders')
-      .select('id,order_number,store_name,total_amount,status,payment_status,created_at,shop_order_items(product_name,quantity,subtotal)')
+      .select('*,shop_order_items(product_name,quantity,subtotal)')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
       .limit(50);

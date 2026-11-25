@@ -46,7 +46,7 @@
           <li><span>${escapeHtml(it.name)} × ${it.quantity}<small>${formatPrice(it.price)} / ชิ้น</small></span>
               <strong>${formatPrice(it.price * it.quantity)}</strong></li>`).join('')}
       </ul>
-      <div class="summary-total"><span>ยอดรวม:</span><strong>${formatPrice(Cart.total())}</strong></div>
+      ${deliverySummaryHtml(Cart.total(), 'ยอดที่ต้องชำระ')}
       <a href="cart.html" class="btn-link">← แก้ไขตะกร้า</a>`;
     submitBtn.disabled = !storeOpen;
     submitBtn.textContent = storeOpen ? 'ยืนยันการสั่งซื้อ' : 'ร้านปิดอยู่ ยังสั่งซื้อไม่ได้';
@@ -88,6 +88,10 @@
 
     setFieldError('address', address ? '' : 'กรุณาเลือกที่อยู่ / สถานที่รับสินค้า');
     if (!address) ok = false;
+
+    const contact = form.contact.value.trim();
+    setFieldError('contact', contact.length >= 2 ? '' : 'กรุณากรอก Facebook หรือ LINE ID สำหรับติดต่อ');
+    if (contact.length < 2) ok = false;
 
     return ok;
   }
@@ -237,6 +241,7 @@
         p_phone: form.phone.value.trim(),
         p_address: form.address.value.trim(),
         p_note: form.note.value.trim(),
+        p_contact: form.contact.value.trim(),
         p_items: items.map(i => ({ product_id: i.id, quantity: i.quantity }))
       });
       if (error) throw error;
@@ -262,6 +267,9 @@
     }
   });
 
+  // ค่าส่งโหลดเสร็จ -> คำนวณสรุปใหม่
+  document.addEventListener('sitesettings', () => { if (!submitting && !checkoutView.hidden && summaryEl.isConnected) renderSummary(); });
+
   form.querySelectorAll('input, textarea, select').forEach(el =>
     el.addEventListener('input', () => el.closest('.field')?.classList.remove('has-error')));
 
@@ -279,7 +287,7 @@
   async function prefill(session) {
     const meta = session.user.user_metadata || {};
     const { data } = await sb.from('shop_orders')
-      .select('customer_name,phone,address')
+      .select('*')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
       .limit(1);
@@ -288,6 +296,7 @@
     fill('customer_name', last.customer_name || meta.full_name);
     fill('phone', last.phone || meta.phone);
     fill('address', last.address);
+    fill('contact', last.contact);
   }
 
   // เปิดด้วย ?pay=<id> -> กลับไปขั้นตอนจ่ายเงิน/รอยืนยันของออเดอร์นั้น
