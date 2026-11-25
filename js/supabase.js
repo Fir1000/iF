@@ -114,6 +114,7 @@ function translateError(err) {
   if (/Invalid login credentials/i.test(msg)) return 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
   if (/already registered|already been registered/i.test(msg)) return 'อีเมลนี้สมัครสมาชิกไว้แล้ว กรุณาเข้าสู่ระบบ';
   if (/Password should be at least/i.test(msg)) return 'รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร';
+  if (/should be different from the old password/i.test(msg)) return 'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม';
   if (/Signups not allowed|signup.*disabled/i.test(msg)) return 'ระบบยังไม่เปิดให้สมัครสมาชิก กรุณาติดต่อร้าน';
   if (/rate limit|too many/i.test(msg)) return 'ทำรายการถี่เกินไป กรุณารอสักครู่แล้วลองใหม่';
   if (/Unable to validate email|invalid.*email/i.test(msg)) return 'รูปแบบอีเมลไม่ถูกต้อง';

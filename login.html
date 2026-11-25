@@ -14,8 +14,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=15">
-  <script src="js/i18n.js?v=6"></script>
+  <link rel="stylesheet" href="css/style.css?v=16">
+  <script src="js/i18n.js?v=7"></script>
 </head>
 <body>
 
@@ -57,6 +57,7 @@
       <div class="field">
         <label for="loginPassword">รหัสผ่าน</label>
         <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
+        <div class="forgot-row"><button type="button" class="btn-link" id="forgotLink">ลืมรหัสผ่าน?</button></div>
       </div>
       <button type="submit" class="btn btn-primary btn-block btn-lg">เข้าสู่ระบบ</button>
     </form>
@@ -80,6 +81,31 @@
         <div class="field-hint">อย่างน้อย 6 ตัวอักษร</div>
       </div>
       <button type="submit" class="btn btn-primary btn-block btn-lg">สมัครสมาชิก</button>
+    </form>
+
+    <!-- ลืมรหัสผ่าน: ส่งลิงก์ตั้งรหัสใหม่ไปที่อีเมล -->
+    <form id="forgotForm" novalidate hidden>
+      <p class="muted">กรอกอีเมลที่ใช้สมัครสมาชิก เราจะส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปให้</p>
+      <div class="field">
+        <label for="forgotEmail">อีเมล</label>
+        <input id="forgotEmail" name="email" type="email" autocomplete="email" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">ส่งลิงก์ตั้งรหัสผ่านใหม่</button>
+      <button type="button" class="btn btn-ghost btn-block" id="backToLogin">← กลับไปเข้าสู่ระบบ</button>
+    </form>
+
+    <!-- เปิดจากลิงก์ในอีเมล: ตั้งรหัสผ่านใหม่ -->
+    <form id="resetForm" novalidate hidden>
+      <div class="field">
+        <label for="newPassword">รหัสผ่านใหม่</label>
+        <input id="newPassword" name="password" type="password" autocomplete="new-password" minlength="6" required>
+        <div class="field-hint">อย่างน้อย 6 ตัวอักษร</div>
+      </div>
+      <div class="field">
+        <label for="newPassword2">ยืนยันรหัสผ่านใหม่</label>
+        <input id="newPassword2" name="password2" type="password" autocomplete="new-password" minlength="6" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">บันทึกรหัสผ่านใหม่</button>
     </form>
 
     <p class="auth-foot"><a href="index.html">← กลับหน้าร้าน</a></p>
@@ -120,9 +146,9 @@
 </a>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=18"></script>
+<script src="js/supabase.js?v=19"></script>
 <script src="js/app-extras.js?v=1"></script>
 <script src="js/cart.js?v=12"></script>
-<script src="js/account.js?v=12"></script>
+<script src="js/account.js?v=13"></script>
 </body>
 </html>

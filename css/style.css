@@ -541,3 +541,8 @@ body.has-sticky-cart .install-float { bottom: 88px; }
   box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
 }
 .free-delivery-pill[hidden] { display: none; }
+
+/* ---------- ลืมรหัสผ่าน ---------- */
+.forgot-row { display: flex; justify-content: flex-end; margin-top: 6px; }
+.forgot-row .btn-link { font-size: 14px; }
+#forgotForm .btn-ghost { margin-top: 10px; }

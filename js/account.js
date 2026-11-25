@@ -12,6 +12,9 @@ async function initLoginPage() {
   if (!loginForm) return;
 
   const signupForm = document.getElementById('signupForm');
+  const forgotForm = document.getElementById('forgotForm');
+  const resetForm = document.getElementById('resetForm');
+  const tabsEl = document.querySelector('.auth-tabs');
   const msg = document.getElementById('authMsg');
   const title = document.getElementById('authTitle');
   const tabs = { login: document.getElementById('tabLogin'), signup: document.getElementById('tabSignup') };
@@ -24,8 +27,19 @@ async function initLoginPage() {
     msg.textContent = text;
   };
 
+  // โหมด: login / signup / forgot (ขอลิงก์) / reset (ตั้งรหัสใหม่จากลิงก์ในอีเมล)
   function switchTab(name) {
     const isLogin = name === 'login';
+    const special = name === 'forgot' || name === 'reset';
+    tabsEl.hidden = special;
+    forgotForm.hidden = name !== 'forgot';
+    resetForm.hidden = name !== 'reset';
+    if (special) {
+      loginForm.hidden = signupForm.hidden = true;
+      title.textContent = name === 'forgot' ? 'ลืมรหัสผ่าน' : 'ตั้งรหัสผ่านใหม่';
+      msg.hidden = true;
+      return;
+    }
     tabs.login.setAttribute('aria-selected', String(isLogin));
     tabs.signup.setAttribute('aria-selected', String(!isLogin));
     loginForm.hidden = !isLogin;
@@ -37,6 +51,13 @@ async function initLoginPage() {
   tabs.signup.addEventListener('click', () => switchTab('signup'));
   if (params.get('tab') === 'signup') switchTab('signup');
 
+  document.getElementById('forgotLink').addEventListener('click', () => {
+    switchTab('forgot');
+    forgotForm.email.value = loginForm.email.value.trim();
+    forgotForm.email.focus();
+  });
+  document.getElementById('backToLogin').addEventListener('click', () => switchTab('login'));
+
   async function goAfterLogin() {
     if (await Auth.isAdmin()) { location.replace(next.startsWith('admin/') ? next : 'admin/dashboard.html'); return; }
     location.replace(next && !next.startsWith('admin/') ? next : 'my-orders.html');
@@ -47,8 +68,19 @@ async function initLoginPage() {
 
   if (!isConfigured()) { msg.hidden = false; msg.className = ''; msg.innerHTML = configNoticeHtml(); return; }
 
-  // เข้าสู่ระบบอยู่แล้ว -> ไปต่อเลย (ยกเว้นเพิ่งถูกเด้งออกจากหลังร้าน)
-  if (params.get('error') !== 'notadmin' && await Auth.session()) { await goAfterLogin(); return; }
+  // เปิดจากลิงก์ "ตั้งรหัสผ่านใหม่" ในอีเมล -> Supabase ล็อกอินให้ชั่วคราว แล้วให้ตั้งรหัสใหม่
+  const isRecovery = params.get('reset') === '1' || /type=recovery/.test(location.hash);
+  sb.auth.onAuthStateChange(event => { if (event === 'PASSWORD_RECOVERY') switchTab('reset'); });
+  if (isRecovery) {
+    if (await Auth.session()) switchTab('reset');
+    else {
+      switchTab('forgot');
+      show('ลิงก์ตั้งรหัสผ่านหมดอายุหรือถูกใช้ไปแล้ว กรุณาขอลิงก์ใหม่');
+    }
+  }
+
+  // เข้าสู่ระบบอยู่แล้ว -> ไปต่อเลย (ยกเว้นเพิ่งถูกเด้งออกจากหลังร้าน / กำลังตั้งรหัสใหม่)
+  if (!isRecovery && params.get('error') !== 'notadmin' && await Auth.session()) { await goAfterLogin(); return; }
 
   async function withBusy(form, busyText, fn) {
     const btn = form.querySelector('button[type="submit"]');
@@ -70,6 +102,33 @@ async function initLoginPage() {
     withBusy(loginForm, 'กำลังเข้าสู่ระบบ...', async () => {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      await goAfterLogin();
+    });
+  });
+
+  forgotForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const email = forgotForm.email.value.trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) { show('รูปแบบอีเมลไม่ถูกต้อง'); return; }
+    withBusy(forgotForm, 'กำลังส่ง...', async () => {
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: new URL('login.html?reset=1' + (next ? '&next=' + encodeURIComponent(next) : ''), location.href).href
+      });
+      if (error) throw error;
+      // ไม่บอกว่ามีบัญชีนี้หรือไม่ (กันคนสุ่มเช็กอีเมล)
+      show(`ถ้ามีบัญชีที่ใช้อีเมล ${email} เราได้ส่งลิงก์ตั้งรหัสผ่านใหม่ไปแล้ว กรุณาเช็กกล่องจดหมาย (และโฟลเดอร์สแปม)`, 'success');
+    });
+  });
+
+  resetForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const password = resetForm.password.value;
+    if (password.length < 6) { show('รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร'); return; }
+    if (password !== resetForm.password2.value) { show('รหัสผ่านทั้งสองช่องไม่ตรงกัน'); return; }
+    withBusy(resetForm, 'กำลังบันทึก...', async () => {
+      const { error } = await sb.auth.updateUser({ password });
+      if (error) throw error;
+      showToast('ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว', 'success');
       await goAfterLogin();
     });
   });
